@@ -87,7 +87,7 @@ def gen_data(problem='regression', datapoints=1000, train=True,
 
 # -------------------------------------------------------------------------------------
 
-def train_wrapper(problem, data, epochs=100):
+def main(problem, data, epochs=100):
     # Set kernel and likelihood
     if problem == 'regression':
         train_x, train_y, val_x, val_y = data
@@ -126,26 +126,28 @@ def train_wrapper(problem, data, epochs=100):
     # Generate regression test points
     test_x, test_y = gen_data(problem='regression', datapoints=100, train=False)
 
-    preds, samples = test(model=model,
-                          likelihood=likelihood,
-                          test_data=(test_x, test_y),
-                          loss_fn=mse_loss)
+    # preds, samples = test(model=model,
+    #                       likelihood=likelihood,
+    #                       test_data=(test_x, test_y),
+    #                       loss_fn=mse_loss)
 
-
+    model.eval()
+    likelihood.eval()
     with torch.no_grad():
         plt.figure(figsize=(10, 6))
         # observed data
         plt.plot(train_x.squeeze().numpy(), train_y.squeeze().numpy(), 'k*', label='Observed Data')
-
+        
+        # Get predictions
+        observed_pred = likelihood(model(test_x))
         # sampled functions
-        for i in range(samples.shape[0]):
-            plt.plot(test_x.squeeze().numpy(), samples[i].numpy(), linewidth=1.0, alpha=0.8)    
+        plt.plot(test_x.squeeze().numpy(), observed_pred.mean.numpy(), 'b')   
 
         # confidence region
-        lower, upper = preds.confidence_region()
+        lower, upper = observed_pred.confidence_region()
         plt.fill_between(test_x.squeeze().numpy(), lower.numpy(), upper.numpy(), color='mediumpurple', alpha=0.5)
         plt.ylim([-3.5, 3.5])
-        plt.legend(['Observed Data', 'Sample Functions', 'Confidence Region'])
+        plt.legend(['Observed Data', 'Prediction', 'Confidence Region'])
         plt.title("GP Function Interpolation")
         plt.show()
 # Set type of problem we want to generate data for here
@@ -156,4 +158,5 @@ domain_bounds={"bottom": 0, "left": 0, "top": 1, "right": 1}
 data = gen_data(problem=problem, datapoints=1000,
                 boundary_condition=boundary_condition,
                 domain_bounds=domain_bounds)
-train_wrapper(problem=problem, data=data, epochs=40)
+
+main(problem=problem, data=data, epochs=50)
